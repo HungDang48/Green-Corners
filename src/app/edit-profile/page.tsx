@@ -8,16 +8,16 @@ import ProfileImageUpload from '@/components/profile/ProfileImageUpload'
 import './edit-profile.css'
 
 interface UserData {
-  id: number;
-  email: string;
-  fullName?: string;
-  phone?: string;
-  address?: string;
-  avatar?: string;
-  description?: string;
-  bio?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  userId: number
+  name: string
+  username: string
+  email: string
+  birthday: string
+  gender: string
+  createdAt: number
+  updatedAt: number
+  avatar?: string
+  bio?: string
 }
 
 const EditProfilePage = () => {
@@ -27,10 +27,11 @@ const EditProfilePage = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [formData, setFormData] = useState({
-    fullName: '',
-    phone: '',
-    address: '',
-    description: '',
+    name: '',
+    username: '',
+    email: '',
+    birthday: '',
+    gender: '',
     bio: ''
   })
 
@@ -46,29 +47,33 @@ const EditProfilePage = () => {
     const parsedUser = JSON.parse(storedUser)[0]
     
     // Fetch complete user data from API
-    fetchUserData(parsedUser.id)
+    fetchUserData(parsedUser.userId)
   }, [router])
 
   const fetchUserData = async (userId: number) => {
     try {
       setLoading(true)
-      const response = await sendRequest<UserData>({
-        url: `http://localhost:5000/Users/${userId}`,
-        method: 'GET'
-      })
+      const response = await fetch(`http://localhost:5000/Users?userId=${userId}`)
       
-      if (!('statusCode' in response)) {
-        setUserData(response)
-        setFormData({
-          fullName: response.fullName || '',
-          phone: response.phone || '',
-          address: response.address || '',
-          description: response.description || '',
-          bio: response.bio || ''
-        })
-      } else {
-        setError('Không thể tải thông tin người dùng')
+      if (!response.ok) {
+        throw new Error('Không thể tải thông tin người dùng')
       }
+
+      const data = await response.json()
+      if (data.length === 0) {
+        throw new Error('Không tìm thấy thông tin người dùng')
+      }
+
+      const user = data[0]
+      setUserData(user)
+      setFormData({
+        name: user.name || '',
+        username: user.username || '',
+        email: user.email || '',
+        birthday: user.birthday || '',
+        gender: user.gender || '',
+        bio: user.bio || ''
+      })
     } catch (error) {
       console.error('Error fetching user data:', error)
       setError('Có lỗi xảy ra khi tải thông tin người dùng')
@@ -77,7 +82,7 @@ const EditProfilePage = () => {
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -95,22 +100,25 @@ const EditProfilePage = () => {
       setError('')
       setSuccess('')
       
-      const response = await sendRequest({
-        url: `http://localhost:5000/Users/${userData.id}`,
+      const response = await fetch(`http://localhost:5000/Users/${userData.userId}`, {
         method: 'PATCH',
-        body: {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           ...userData,
           ...formData,
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: Date.now()
+        })
       })
       
-      if (!('statusCode' in response)) {
-        setUserData(response as UserData)
-        setSuccess('Cập nhật thông tin thành công')
-      } else {
-        setError('Không thể cập nhật thông tin')
+      if (!response.ok) {
+        throw new Error('Không thể cập nhật thông tin')
       }
+
+      const updatedUser = await response.json()
+      setUserData(updatedUser)
+      setSuccess('Cập nhật thông tin thành công')
     } catch (error) {
       console.error('Error updating user data:', error)
       setError('Có lỗi xảy ra khi cập nhật thông tin')
@@ -169,7 +177,7 @@ const EditProfilePage = () => {
                 <h4>Ảnh đại diện</h4>
                 {userData && (
                   <ProfileImageUpload 
-                    userId={userData.id}
+                    userId={userData.userId}
                     currentAvatar={userData.avatar}
                     onUploadSuccess={handleAvatarUploadSuccess}
                   />
@@ -183,59 +191,59 @@ const EditProfilePage = () => {
                   <Form.Label>Email</Form.Label>
                   <Form.Control 
                     type="email" 
-                    value={userData?.email || ''} 
-                    disabled 
+                    name="email"
+                    value={formData.email} 
+                    onChange={handleInputChange}
+                    required
                   />
-                  <Form.Text className="text-muted">
-                    Email không thể thay đổi
-                  </Form.Text>
                 </Form.Group>
                 
                 <Form.Group className="mb-3">
                   <Form.Label>Họ và tên</Form.Label>
                   <Form.Control 
                     type="text" 
-                    name="fullName"
-                    value={formData.fullName} 
+                    name="name"
+                    value={formData.name} 
                     onChange={handleInputChange}
-                    placeholder="Nhập họ và tên của bạn"
+                    required
                   />
                 </Form.Group>
                 
                 <Form.Group className="mb-3">
-                  <Form.Label>Số điện thoại</Form.Label>
+                  <Form.Label>Tên đăng nhập</Form.Label>
                   <Form.Control 
                     type="text" 
-                    name="phone"
-                    value={formData.phone} 
+                    name="username"
+                    value={formData.username} 
                     onChange={handleInputChange}
-                    placeholder="Nhập số điện thoại của bạn"
+                    required
                   />
                 </Form.Group>
                 
                 <Form.Group className="mb-3">
-                  <Form.Label>Địa chỉ</Form.Label>
+                  <Form.Label>Ngày sinh</Form.Label>
                   <Form.Control 
-                    type="text" 
-                    name="address"
-                    value={formData.address} 
+                    type="date" 
+                    name="birthday"
+                    value={formData.birthday} 
                     onChange={handleInputChange}
-                    placeholder="Nhập địa chỉ của bạn"
                   />
                 </Form.Group>
                 
                 <Form.Group className="mb-3">
-                  <Form.Label>Giới thiệu</Form.Label>
-                  <Form.Control 
-                    as="textarea" 
-                    rows={3}
-                    name="description"
-                    value={formData.description} 
+                  <Form.Label>Giới tính</Form.Label>
+                  <Form.Select
+                    name="gender"
+                    value={formData.gender}
                     onChange={handleInputChange}
-                    placeholder="Giới thiệu về bản thân"
-                  />
+                  >
+                    <option value="">Chọn giới tính</option>
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                    <option value="other">Khác</option>
+                  </Form.Select>
                 </Form.Group>
-                
+
                 <Form.Group className="mb-3">
                   <Form.Label>Tiểu sử</Form.Label>
                   <Form.Control 
@@ -246,9 +254,6 @@ const EditProfilePage = () => {
                     onChange={handleInputChange}
                     placeholder="Viết tiểu sử của bạn ở đây..."
                   />
-                  <Form.Text className="text-muted">
-                    Tiểu sử sẽ hiển thị trên trang cá nhân của bạn
-                  </Form.Text>
                 </Form.Group>
                 
                 <div className="d-flex justify-content-between">

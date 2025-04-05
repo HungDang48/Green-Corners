@@ -7,7 +7,7 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import './profile.css'
 
 interface UserData {
-  id: number
+  userId: number
   name: string
   username: string
   email: string
@@ -19,12 +19,32 @@ interface UserData {
   bio?: string
 }
 
+interface Post {
+  id: number
+  title: string
+  shortDescription: string
+  longDescription: string
+  content: string
+  image: string
+  categoryIds: number[]
+  createdAt: number
+  updatedAt: number
+  userId: number
+}
+
+interface Category {
+  id: number
+  name: string
+}
+
 const ProfilePage = () => {
   const router = useRouter()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('posts')
+  const [posts, setPosts] = useState<Post[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -37,16 +57,19 @@ const ProfilePage = () => {
         }
 
         const parsedUser = JSON.parse(storedUser)[0]
-        const userId = parsedUser.id
+        const userId = parsedUser.userId
 
         // Fetch user data from API
-        const response = await fetch(`http://localhost:5000/Users/${userId}`)
+        const response = await fetch(`http://localhost:5000/Users?userId=${userId}`)
         if (!response.ok) {
           throw new Error('Không thể tải thông tin người dùng')
         }
 
         const data = await response.json()
-        setUserData(data)
+        if (data.length === 0) {
+          throw new Error('Không tìm thấy thông tin người dùng')
+        }
+        setUserData(data[0])
       } catch (err) {
         setError('Có lỗi xảy ra khi tải thông tin người dùng')
         console.error('Error fetching user data:', err)
@@ -58,12 +81,56 @@ const ProfilePage = () => {
     fetchUserData()
   }, [router])
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!userData) return
+
+        const [postsResponse, categoriesResponse] = await Promise.all([
+          fetch(`http://localhost:5000/BlogPost?userId=${userData.userId}`),
+          fetch('http://localhost:5000/categories')
+        ])
+
+        if (!postsResponse.ok || !categoriesResponse.ok) {
+          throw new Error('Failed to fetch data')
+        }
+
+        const postsData = await postsResponse.json()
+        const categoriesData = await categoriesResponse.json()
+
+        setPosts(postsData)
+        setCategories(categoriesData)
+      } catch (err) {
+        setError('Error loading data')
+      }
+    }
+
+    fetchData()
+  }, [userData])
+
   const handleEditUserAccountClick = () => {
     router.push('/edit-profile')
   }
 
   const handleTabClick = (tab: string) => {
     setActiveTab(tab)
+  }
+
+  const getCategoryNames = (categoryIds: number[]) => {
+    if (!categories || categories.length === 0) {
+      return 'No categories'
+    }
+    if (!categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0) {
+      return 'No categories'
+    }
+    const categoryNames = categoryIds
+      .map(id => categories.find(cat => cat.id === id)?.name)
+      .filter(Boolean)
+    return categoryNames.length > 0 ? categoryNames.join(', ') : 'No categories'
+  }
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString()
   }
 
   if (loading) {
@@ -88,16 +155,6 @@ const ProfilePage = () => {
 
   if (!userData) {
     return null
-  }
-
-  // Format date from timestamp
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp)
-    return date.toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
   }
 
   return (
@@ -174,8 +231,43 @@ const ProfilePage = () => {
 
             <div className="tab-content">
               {activeTab === 'posts' && (
-                <div className="no-content-message">
-                  Chưa có bài viết nào
+                <div className="posts-section">
+                  <div className="profile-header">
+                    <h2>My Posts</h2>
+                    <button 
+                      className="add-post-btn"
+                      onClick={() => router.push('/create-post')}
+                    >
+                      Thêm bài viết
+                    </button>
+                  </div>
+                  <div className="posts-grid">
+                    {posts.length > 0 ? (
+                      posts.map(post => (
+                        <div key={post.id} className="post-card">
+                          {post.image && (
+                            <img src={post.image} alt={post.title} className="post-image" />
+                          )}
+                          <div className="post-content">
+                            <h3>{post.title}</h3>
+                            <p className="post-description">{post.shortDescription}</p>
+                            <div className="post-meta">
+                              <span className="post-categories">
+                                {getCategoryNames(post.categoryIds)}
+                              </span>
+                              <span className="post-date">
+                                {formatDate(post.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="no-content-message">
+                        Chưa có bài viết nào
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
