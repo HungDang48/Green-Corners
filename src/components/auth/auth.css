@@ -1,0 +1,96 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: white;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 10px;
+}
+
+.auth-card .card-body {
+  padding: 2rem;
+}
+
+.auth-card h2 {
+  color: #333;
+  font-weight: 600;
+}
+
+.auth-card .form-label {
+  font-weight: 500;
+  color: #555;
+}
+
+.auth-card .form-control {
+  border-radius: 5px;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+}
+
+.auth-card .form-control:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.auth-card .btn-primary {
+  padding: 0.75rem;
+  font-weight: 500;
+  background-color: #007bff;
+  border: none;
+  color: #ffffff;
+  transition: background-color 0.3s;
+}
+
+.auth-card .btn-primary:hover {
+  background-color: #0056b3;
+  color: #ffffff;
+}
+
+.auth-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+  color: #0056b3;
+}
+
+/* Remember me checkbox styling */
+.auth-card .form-check {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.auth-card .form-check-input {
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.auth-card .form-check-label {
+  cursor: pointer;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.auth-card .form-check-input:checked {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .auth-card .card-body {
+    padding: 1.5rem;
+  }
+} 

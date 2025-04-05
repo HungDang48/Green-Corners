@@ -1,0 +1,154 @@
+.admin-header {
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.admin-header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #000000;
+}
+
+.admin-logo img {
+  height: 40px;
+  margin-right: 1rem;
+}
+
+.admin-logo h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.admin-nav-link {
+  text-decoration: none;
+  color: #666666;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.admin-nav-link:hover {
+  color: #000000;
+  background-color: #f5f5f5;
+}
+
+.admin-nav-link.active {
+  color: #000000;
+  background-color: #f5f5f5;
+}
+
+.admin-user-menu {
+  position: relative;
+}
+
+.admin-user-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.admin-user-button:hover {
+  background-color: #f5f5f5;
+}
+
+.admin-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.admin-user-name {
+  font-weight: 500;
+  color: #000000;
+}
+
+.admin-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  padding: 0.5rem 0;
+  margin-top: 0.5rem;
+  display: none;
+}
+
+.admin-dropdown-menu.show {
+  display: block;
+}
+
+.admin-dropdown-item {
+  display: block;
+  padding: 0.75rem 1rem;
+  color: #333333;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.admin-dropdown-item:hover {
+  background-color: #f5f5f5;
+  color: #000000;
+}
+
+.admin-dropdown-divider {
+  height: 1px;
+  background-color: #e5e5e5;
+  margin: 0.5rem 0;
+}
+
+@media (max-width: 768px) {
+  .admin-header-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .admin-nav {
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .admin-nav-link {
+    width: 100%;
+    text-align: center;
+  }
+
+  .admin-user-menu {
+    width: 100%;
+  }
+
+  .admin-dropdown-menu {
+    width: 100%;
+  }
+} 

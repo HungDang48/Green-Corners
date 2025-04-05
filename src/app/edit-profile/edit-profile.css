@@ -1,0 +1,89 @@
+.edit-profile-container {
+  padding: 80px 20px 40px;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+.edit-profile-card {
+  max-width: 1200px;
+  margin: 0 auto;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.edit-profile-header {
+  background-color: #020202;
+  color: white;
+  padding: 20px;
+  border-bottom: none;
+}
+
+.edit-profile-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.avatar-section {
+  text-align: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.avatar-section h4 {
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #333;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 80px 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(39, 174, 96, 0.2);
+  border-radius: 50%;
+  border-top-color: #27ae60;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error-container {
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.error-container .alert {
+  margin-bottom: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .edit-profile-container {
+    padding: 70px 15px 30px;
+  }
+  
+  .edit-profile-header h2 {
+    font-size: 20px;
+  }
+  
+  .avatar-section {
+    margin-bottom: 20px;
+  }
+} 
