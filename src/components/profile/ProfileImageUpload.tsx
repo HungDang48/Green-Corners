@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Button, Alert } from 'react-bootstrap'
-import { sendRequest } from '@/app/Utils/api'
-import './profile.css'
+import React, { useState, useRef } from 'react'
+import { Button, Image } from 'react-bootstrap'
+import { FaCamera } from 'react-icons/fa'
+import './ProfileImageUpload.css'
 
 interface ProfileImageUploadProps {
   userId: number
@@ -16,123 +16,79 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
   currentAvatar,
   onUploadSuccess
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string>(currentAvatar || '')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(currentAvatar)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setError('Kích thước file không được vượt quá 5MB')
-        return
-      }
-      if (!file.type.startsWith('image/')) {
-        setError('File phải là hình ảnh')
-        return
-      }
-      setSelectedFile(file)
-      setPreviewUrl(URL.createObjectURL(file))
-      setError('')
-    }
+  const handleImageClick = () => {
+    fileInputRef.current?.click()
   }
 
-  const handleUpload = async () => {
-    if (!selectedFile) {
-      setError('Vui lòng chọn ảnh để tải lên')
-      return
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Create preview URL
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string)
     }
+    reader.readAsDataURL(file)
 
-    setLoading(true)
-    setError('')
+    // Upload file
+    await handleUpload(file)
+  }
 
+  const handleUpload = async (file: File) => {
     try {
-      // Convert image to base64
-      const reader = new FileReader()
-      reader.readAsDataURL(selectedFile)
+      setIsUploading(true)
       
-      reader.onload = async () => {
-        const base64String = reader.result as string
-        
-        // First, get the current user data
-        const getUserResponse = await sendRequest({
-          url: `http://localhost:5000/Users/${userId}`,
-          method: 'GET'
-        })
-        
-        if ('statusCode' in getUserResponse) {
-          throw new Error('Không thể lấy thông tin người dùng')
-        }
-        
-        // Update user data with the base64 image
-        const response = await sendRequest({
-          url: `http://localhost:5000/Users/${userId}`,
-          method: 'PATCH',
-          body: {
-            ...getUserResponse,
-            avatar: base64String,
-            updatedAt: Date.now()
-          }
-        })
+      const formData = new FormData()
+      formData.append('image', file)
+      formData.append('userId', userId.toString())
 
-        if ('statusCode' in response) {
-          throw new Error(response.message || 'Có lỗi xảy ra khi tải ảnh lên')
-        }
+      const response = await fetch('http://localhost:5000/upload-avatar', {
+        method: 'POST',
+        body: formData
+      })
 
-        // Call the success callback with the base64 string
-        onUploadSuccess(base64String)
-        setLoading(false)
+      if (!response.ok) {
+        throw new Error('Upload failed')
       }
-      
-      reader.onerror = () => {
-        setError('Có lỗi xảy ra khi đọc file')
-        setLoading(false)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi tải ảnh lên')
-      setLoading(false)
+
+      const data = await response.json()
+      onUploadSuccess(data.avatarUrl)
+    } catch (error) {
+      console.error('Error uploading avatar:', error)
+      alert('Có lỗi xảy ra khi tải lên ảnh đại diện')
+    } finally {
+      setIsUploading(false)
     }
   }
 
   return (
     <div className="profile-image-upload">
-      <div className="profile-img-wrapper">
-        <img
-          src={previewUrl || "https://via.placeholder.com/200"}
-          alt="Profile"
-          className="profile-img"
-        />
-      </div>
-      
-      <div className="upload-controls">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="file-input"
-          id="avatar-upload"
-        />
-        <label htmlFor="avatar-upload" className="upload-label">
-          Chọn ảnh
-        </label>
-        
-        {selectedFile && (
-          <Button
-            onClick={handleUpload}
-            disabled={loading}
-            className="upload-button"
-          >
-            {loading ? 'Đang tải lên...' : 'Tải lên'}
-          </Button>
+      <div className="image-container" onClick={handleImageClick}>
+        {previewUrl ? (
+          <Image src={previewUrl} alt="Profile" roundedCircle className="profile-image" />
+        ) : (
+          <div className="placeholder-image">
+            <FaCamera size={24} />
+          </div>
         )}
+        <div className="overlay">
+          <FaCamera size={24} />
+          <span>Thay đổi ảnh</span>
+        </div>
       </div>
-
-      {error && (
-        <Alert variant="danger" className="mt-2">
-          {error}
-        </Alert>
-      )}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
+      {isUploading && <div className="uploading-indicator">Đang tải lên...</div>}
     </div>
   )
 }

@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { Form, Button, Modal, Alert } from 'react-bootstrap'
-import { sendRequest } from '@/app/Utils/api'
 import './profile.css'
 
 interface UserData {
-  id: number
+  userId: number
   name: string
   username: string
   email: string
@@ -15,6 +14,8 @@ interface UserData {
   createdAt: number
   updatedAt: number
   avatar?: string
+  bio?: string
+  password?: string
 }
 
 interface EditProfileFormProps {
@@ -38,7 +39,7 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
     setFormData(userData)
   }, [userData])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -53,21 +54,30 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
 
     try {
       // Update user data
-      const response = await sendRequest({
-        url: `http://localhost:5000/Users/${userData.id}`,
+      const response = await fetch(`http://localhost:5000/Users/${userData.userId}`, {
         method: 'PATCH',
-        body: {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           ...formData,
-          updatedAt: Date.now()
-        }
+          userId: userData.userId,
+          password: userData.password,
+          createdAt: userData.createdAt,
+          updatedAt: Date.now(),
+          avatar: userData.avatar
+        })
       })
 
-      if ('statusCode' in response) {
-        throw new Error(response.message || 'Có lỗi xảy ra khi cập nhật thông tin')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Có lỗi xảy ra khi cập nhật thông tin')
       }
 
+      const updatedUser = await response.json() as UserData
+      
       // Call the success callback with updated user data
-      onSave(response)
+      onSave(updatedUser)
       onHide()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi cập nhật thông tin')
@@ -145,6 +155,18 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
               <option value="female">Nữ</option>
               <option value="other">Khác</option>
             </Form.Select>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Tiểu sử</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              name="bio"
+              value={formData.bio || ''}
+              onChange={handleChange}
+              placeholder="Viết tiểu sử của bạn ở đây..."
+            />
           </Form.Group>
 
           <div className="d-flex justify-content-end gap-2">

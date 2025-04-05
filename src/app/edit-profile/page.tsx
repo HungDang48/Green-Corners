@@ -18,6 +18,7 @@ interface UserData {
   updatedAt: number
   avatar?: string
   bio?: string
+  password?: string
 }
 
 const EditProfilePage = () => {
@@ -100,28 +101,64 @@ const EditProfilePage = () => {
       setError('')
       setSuccess('')
       
+      // Prepare the update data according to API structure
+      const updateData = {
+        userId: userData.userId,
+        name: formData.name,
+        username: formData.username,
+        email: formData.email,
+        birthday: formData.birthday,
+        gender: formData.gender,
+        bio: formData.bio,
+        password: userData.password, // Keep the existing password
+        createdAt: userData.createdAt,
+        updatedAt: Date.now(),
+        avatar: userData.avatar
+      }
+
+      console.log('Sending update data:', updateData)
+
       const response = await fetch(`http://localhost:5000/Users/${userData.userId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          ...userData,
-          ...formData,
-          updatedAt: Date.now()
-        })
+        body: JSON.stringify(updateData)
       })
       
       if (!response.ok) {
-        throw new Error('Không thể cập nhật thông tin')
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Không thể cập nhật thông tin')
       }
 
       const updatedUser = await response.json()
-      setUserData(updatedUser)
+      console.log('Received updated user:', updatedUser)
+
+      // Update state with new data
+      setUserData(prev => ({
+        ...prev!,
+        ...updateData
+      }))
       setSuccess('Cập nhật thông tin thành công')
+      
+      // Update localStorage with new user data
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser)
+        parsedUser[0] = {
+          ...parsedUser[0],
+          ...updateData
+        }
+        localStorage.setItem('user', JSON.stringify(parsedUser))
+      }
+
+      // Redirect to profile page after successful update
+      setTimeout(() => {
+        router.push('/profile')
+      }, 1500)
     } catch (error) {
       console.error('Error updating user data:', error)
-      setError('Có lỗi xảy ra khi cập nhật thông tin')
+      setError(error instanceof Error ? error.message : 'Có lỗi xảy ra khi cập nhật thông tin')
     } finally {
       setLoading(false)
     }
@@ -129,10 +166,26 @@ const EditProfilePage = () => {
 
   const handleAvatarUploadSuccess = (newAvatarUrl: string) => {
     if (userData) {
-      setUserData({
-        ...userData,
+      // Update local state
+      setUserData(prev => ({
+        ...prev!,
         avatar: newAvatarUrl
-      })
+      }))
+      
+      // Update form data
+      setFormData(prev => ({
+        ...prev,
+        avatar: newAvatarUrl
+      }))
+      
+      // Update localStorage
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser)
+        parsedUser[0].avatar = newAvatarUrl
+        localStorage.setItem('user', JSON.stringify(parsedUser))
+      }
+      
       setSuccess('Cập nhật ảnh đại diện thành công')
     }
   }

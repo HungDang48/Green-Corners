@@ -5,11 +5,10 @@ import { NavDropdown } from 'react-bootstrap'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import { useRouter } from 'next/navigation'
 import './header.css'
-import { sendRequest } from '@/app/Utils/api'
 import { useAuth } from '@/context/AuthContext'
 
 interface UserData {
-  id: number;
+  userId: number;
   email: string;
   avatar?: string;
 }
@@ -28,13 +27,13 @@ const UserDropdown = () => {
         const parsedUser = JSON.parse(storedUser)[0]
         // Set initial user data immediately from localStorage
         setUserData({
-          id: parsedUser.id,
+          userId: parsedUser.userId,
           email: parsedUser.email,
           avatar: parsedUser.avatar
         })
         
         // Then fetch complete user data from API in the background
-        fetchUserData(parsedUser.id)
+        fetchUserData(parsedUser.userId)
       } catch (error) {
         console.error('Error parsing user data:', error)
         setIsLoading(false)
@@ -46,13 +45,19 @@ const UserDropdown = () => {
 
   const fetchUserData = async (userId: number) => {
     try {
-      const response = await sendRequest<UserData>({
-        url: `http://localhost:5000/Users/${userId}`,
-        method: 'GET'
-      })
+      const response = await fetch(`http://localhost:5000/Users?userId=${userId}`)
       
-      if (!('statusCode' in response)) {
-        setUserData(response)
+      if (!response.ok) {
+        throw new Error('Failed to fetch user data')
+      }
+
+      const data = await response.json()
+      if (data.length > 0) {
+        setUserData({
+          userId: data[0].userId,
+          email: data[0].email,
+          avatar: data[0].avatar
+        })
       }
     } catch (error) {
       console.error('Error fetching user data:', error)
