@@ -29,19 +29,17 @@ const BlogList = () => {
   useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
-        const response = await fetch('http://localhost:5000/BlogPost')
-        if (!response.ok) {
-          throw new Error('Không thể tải danh sách blog')
-        }
-        const data = await response.json()
-        setBlogPosts(data)
-      } catch (err) {
-        setError('Có lỗi xảy ra khi tải danh sách blog')
-        console.error('Error fetching blog posts:', err)
+        setLoading(true);
+        const response = await fetch('http://localhost:5001/BlogPost');
+        const data = await response.json();
+        setBlogPosts(data);
+      } catch (error) {
+        console.error('Error fetching blog posts:', error);
+        setError('Failed to load blog posts');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
     fetchBlogPosts()
   }, [])

@@ -34,6 +34,9 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
   const [formData, setFormData] = useState<UserData>(userData)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     setFormData(userData)
@@ -47,25 +50,53 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
     }))
   }
 
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    if (name === 'newPassword') {
+      setNewPassword(value)
+    } else if (name === 'confirmPassword') {
+      setConfirmPassword(value)
+    }
+  }
+
+  const validatePasswords = () => {
+    if (newPassword && newPassword.length < 6) {
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự')
+      return false
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Mật khẩu xác nhận không khớp')
+      return false
+    }
+    setPasswordError('')
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     try {
+      // Validate passwords if they are being changed
+      if (newPassword && !validatePasswords()) {
+        setLoading(false)
+        return
+      }
+
       // Update user data
-      const response = await fetch(`http://localhost:5000/Users/${userData.userId}`, {
-        method: 'PATCH',
+      const response = await fetch(`http://localhost:5001/Users/${userData.userId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...formData,
-          userId: userData.userId,
-          password: userData.password,
-          createdAt: userData.createdAt,
-          updatedAt: Date.now(),
-          avatar: userData.avatar
+          name: formData.name,
+          username: formData.username,
+          email: formData.email,
+          birthday: formData.birthday,
+          gender: formData.gender,
+          password: newPassword || formData.password
         })
       })
 
@@ -127,9 +158,10 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
               type="email"
               name="email"
               value={formData.email}
-              onChange={handleChange}
-              required
+              disabled
+              className="disabled-input"
             />
+            <small className="text-muted">Email không thể thay đổi</small>
           </Form.Group>
 
           <Form.Group className="mb-3">
@@ -167,6 +199,31 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
               onChange={handleChange}
               placeholder="Viết tiểu sử của bạn ở đây..."
             />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Mật khẩu mới</Form.Label>
+            <Form.Control
+              type="password"
+              name="newPassword"
+              value={newPassword}
+              onChange={handlePasswordChange}
+              placeholder="Nhập mật khẩu mới (để trống nếu không muốn thay đổi)"
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Xác nhận mật khẩu mới</Form.Label>
+            <Form.Control
+              type="password"
+              name="confirmPassword"
+              value={confirmPassword}
+              onChange={handlePasswordChange}
+              placeholder="Nhập lại mật khẩu mới"
+            />
+            {passwordError && (
+              <small className="text-danger">{passwordError}</small>
+            )}
           </Form.Group>
 
           <div className="d-flex justify-content-end gap-2">

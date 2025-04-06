@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { sendRequest } from '@/app/Utils/api'
 import './register.css'
+import axios from 'axios'
 
 interface RegisterFormData {
   name: string
@@ -80,7 +81,7 @@ const RegisterPage = () => {
     try {
       // Lấy danh sách tất cả người dùng
       const response = await sendRequest<UserResponse[]>({
-        url: 'http://localhost:5000/Users',
+        url: 'http://localhost:5001/Users',
         method: 'GET'
       })
       
@@ -114,21 +115,28 @@ const RegisterPage = () => {
         return
       }
       
+      // Tạo ID ngẫu nhiên (số) từ 1 đến 10000
+      const randomId = Math.floor(Math.random() * 10000) + 1
+      
       // Prepare data for API
       const userData = {
+        id: randomId,
+        userid: randomId,
         name: formData.name,
         username: formData.username,
         email: formData.email,
         password: formData.password,
         birthday: new Date(formData.birthday).toISOString(),
         gender: formData.gender,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        isblock: false,
+        createdAt: new Date().getTime(),
+        updatedAt: new Date().getTime(),
+        avatar: null
       }
       
       // Send registration request
       const response = await sendRequest<UserResponse>({
-        url: 'http://localhost:5000/Users',
+        url: 'http://localhost:5001/Users',
         method: 'POST',
         body: userData
       })
@@ -158,6 +166,14 @@ const RegisterPage = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDelete = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Implement the logic to delete the user
+    // This is a placeholder and should be replaced with the actual implementation
+    console.log('Delete user logic not implemented')
   }
 
   return (

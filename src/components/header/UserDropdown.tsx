@@ -8,9 +8,10 @@ import './header.css'
 import { useAuth } from '@/context/AuthContext'
 
 interface UserData {
-  userId: number;
+  id: number;
+  userid: number;
   email: string;
-  avatar?: string;
+  avatar: string | null;
 }
 
 const UserDropdown = () => {
@@ -24,16 +25,20 @@ const UserDropdown = () => {
     const storedUser = localStorage.getItem('user')
     if (storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser)[0]
+        const parsedUser = JSON.parse(storedUser)
+        // Kiểm tra nếu parsedUser là một mảng
+        const userData = Array.isArray(parsedUser) ? parsedUser[0] : parsedUser
+        
         // Set initial user data immediately from localStorage
         setUserData({
-          userId: parsedUser.userId,
-          email: parsedUser.email,
-          avatar: parsedUser.avatar
+          id: userData.id,
+          userid: userData.id, // Sử dụng id làm userid
+          email: userData.email,
+          avatar: userData.avatar
         })
         
         // Then fetch complete user data from API in the background
-        fetchUserData(parsedUser.userId)
+        fetchUserData(userData.id)
       } catch (error) {
         console.error('Error parsing user data:', error)
         setIsLoading(false)
@@ -45,7 +50,7 @@ const UserDropdown = () => {
 
   const fetchUserData = async (userId: number) => {
     try {
-      const response = await fetch(`http://localhost:5000/Users?userId=${userId}`)
+      const response = await fetch(`http://localhost:5001/Users?userid=${userId}`)
       
       if (!response.ok) {
         throw new Error('Failed to fetch user data')
@@ -54,7 +59,8 @@ const UserDropdown = () => {
       const data = await response.json()
       if (data.length > 0) {
         setUserData({
-          userId: data[0].userId,
+          id: data[0].id,
+          userid: data[0].userid,
           email: data[0].email,
           avatar: data[0].avatar
         })

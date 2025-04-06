@@ -8,15 +8,17 @@ import ProfileImageUpload from '@/components/profile/ProfileImageUpload'
 import './edit-profile.css'
 
 interface UserData {
-  userId: number
+  id: number
+  userid: number
   name: string
   username: string
   email: string
   birthday: string
   gender: string
+  isblock: boolean
   createdAt: number
   updatedAt: number
-  avatar?: string
+  avatar: string | null
   bio?: string
   password?: string
 }
@@ -35,6 +37,10 @@ const EditProfilePage = () => {
     gender: '',
     bio: ''
   })
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     // Check if user is logged in
@@ -45,16 +51,18 @@ const EditProfilePage = () => {
     }
 
     // Get user data from localStorage
-    const parsedUser = JSON.parse(storedUser)[0]
+    const parsedUser = JSON.parse(storedUser)
+    // Kiểm tra nếu parsedUser là một mảng
+    const userData = Array.isArray(parsedUser) ? parsedUser[0] : parsedUser
     
     // Fetch complete user data from API
-    fetchUserData(parsedUser.userId)
+    fetchUserData(userData.id)
   }, [router])
 
   const fetchUserData = async (userId: number) => {
     try {
       setLoading(true)
-      const response = await fetch(`http://localhost:5000/Users?userId=${userId}`)
+      const response = await fetch(`http://localhost:5001/Users?userid=${userId}`)
       
       if (!response.ok) {
         throw new Error('Không thể tải thông tin người dùng')
@@ -91,26 +99,61 @@ const EditProfilePage = () => {
     }))
   }
 
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    if (name === 'currentPassword') {
+      setCurrentPassword(value)
+    } else if (name === 'newPassword') {
+      setNewPassword(value)
+    } else if (name === 'confirmPassword') {
+      setConfirmPassword(value)
+    }
+  }
+
+  const validatePasswords = () => {
+    if (newPassword && newPassword.length < 6) {
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự')
+      return false
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Mật khẩu xác nhận không khớp')
+      return false
+    }
+    if (newPassword && currentPassword !== userData?.password) {
+      setPasswordError('Mật khẩu hiện tại không chính xác')
+      return false
+    }
+    setPasswordError('')
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!userData) return
     
     try {
+      // Validate passwords if they are being changed
+      if (newPassword && !validatePasswords()) {
+        return
+      }
+
       setLoading(true)
       setError('')
       setSuccess('')
       
       // Prepare the update data according to API structure
       const updateData = {
-        userId: userData.userId,
+        id: userData.id,
+        userid: userData.userid,
         name: formData.name,
         username: formData.username,
         email: formData.email,
         birthday: formData.birthday,
         gender: formData.gender,
         bio: formData.bio,
-        password: userData.password, // Keep the existing password
+        password: newPassword || userData.password, // Use new password if provided
+        isblock: userData.isblock,
         createdAt: userData.createdAt,
         updatedAt: Date.now(),
         avatar: userData.avatar
@@ -118,8 +161,8 @@ const EditProfilePage = () => {
 
       console.log('Sending update data:', updateData)
 
-      const response = await fetch(`http://localhost:5000/Users/${userData.userId}`, {
-        method: 'PATCH',
+      const response = await fetch(`http://localhost:5001/Users/${userData.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -145,12 +188,26 @@ const EditProfilePage = () => {
       const storedUser = localStorage.getItem('user')
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser)
-        parsedUser[0] = {
-          ...parsedUser[0],
-          ...updateData
+        if (Array.isArray(parsedUser)) {
+          parsedUser[0] = {
+            ...parsedUser[0],
+            id: updateData.id,
+            email: updateData.email,
+            avatar: updateData.avatar
+          }
+        } else {
+          parsedUser.id = updateData.id
+          parsedUser.email = updateData.email
+          parsedUser.avatar = updateData.avatar
         }
         localStorage.setItem('user', JSON.stringify(parsedUser))
       }
+
+      // Reset password fields
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordError('')
 
       // Redirect to profile page after successful update
       setTimeout(() => {
@@ -182,7 +239,11 @@ const EditProfilePage = () => {
       const storedUser = localStorage.getItem('user')
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser)
-        parsedUser[0].avatar = newAvatarUrl
+        if (Array.isArray(parsedUser)) {
+          parsedUser[0].avatar = newAvatarUrl
+        } else {
+          parsedUser.avatar = newAvatarUrl
+        }
         localStorage.setItem('user', JSON.stringify(parsedUser))
       }
       
@@ -230,7 +291,7 @@ const EditProfilePage = () => {
                 <h4>Ảnh đại diện</h4>
                 {userData && (
                   <ProfileImageUpload 
-                    userId={userData.userId}
+                    userId={userData.id}
                     currentAvatar={userData.avatar}
                     onUploadSuccess={handleAvatarUploadSuccess}
                   />
@@ -246,9 +307,10 @@ const EditProfilePage = () => {
                     type="email" 
                     name="email"
                     value={formData.email} 
-                    onChange={handleInputChange}
-                    required
+                    disabled
+                    className="disabled-input"
                   />
+                  <small className="text-muted">Email không thể thay đổi</small>
                 </Form.Group>
                 
                 <Form.Group className="mb-3">
@@ -307,6 +369,42 @@ const EditProfilePage = () => {
                     onChange={handleInputChange}
                     placeholder="Viết tiểu sử của bạn ở đây..."
                   />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Mật khẩu hiện tại</Form.Label>
+                  <Form.Control 
+                    type="password" 
+                    name="currentPassword"
+                    value={currentPassword} 
+                    onChange={handlePasswordChange}
+                    placeholder="Nhập mật khẩu hiện tại"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Mật khẩu mới</Form.Label>
+                  <Form.Control 
+                    type="password" 
+                    name="newPassword"
+                    value={newPassword} 
+                    onChange={handlePasswordChange}
+                    placeholder="Nhập mật khẩu mới (để trống nếu không muốn thay đổi)"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Xác nhận mật khẩu mới</Form.Label>
+                  <Form.Control 
+                    type="password" 
+                    name="confirmPassword"
+                    value={confirmPassword} 
+                    onChange={handlePasswordChange}
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                  {passwordError && (
+                    <small className="text-danger">{passwordError}</small>
+                  )}
                 </Form.Group>
                 
                 <div className="d-flex justify-content-between">

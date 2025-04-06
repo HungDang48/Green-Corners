@@ -1,26 +1,31 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Container, Button, Alert } from 'react-bootstrap'
+import { Container, Button, Alert, Modal } from 'react-bootstrap'
 import { useRouter } from 'next/navigation'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import './profile.css'
 
 interface UserData {
-  userId: number
+  id: number
+  userid: number
   name: string
   username: string
   email: string
   birthday: string
   gender: string
+  isblock: boolean
   createdAt: number
   updatedAt: number
-  avatar?: string
+  avatar: string | null
   bio?: string
+  password?: string
 }
 
 interface Post {
   id: number
+  blogid: number
+  userid: number
   title: string
   shortDescription: string
   longDescription: string
@@ -29,12 +34,20 @@ interface Post {
   categoryIds: number[]
   createdAt: number
   updatedAt: number
-  userId: number
 }
 
 interface Category {
   id: number
   name: string
+}
+
+interface Series {
+  id: number
+  title: string
+  content: string
+  userId: number
+  categoryId: number
+  seriesId?: number
 }
 
 const ProfilePage = () => {
@@ -45,6 +58,15 @@ const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('posts')
   const [posts, setPosts] = useState<Post[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [series, setSeries] = useState<Series[]>([])
+  const [showAddSeriesModal, setShowAddSeriesModal] = useState(false)
+  const [newSeries, setNewSeries] = useState<Series>({
+    id: 0,
+    title: '',
+    content: '',
+    userId: 0,
+    categoryId: 0
+  })
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -56,11 +78,13 @@ const ProfilePage = () => {
           return
         }
 
-        const parsedUser = JSON.parse(storedUser)[0]
-        const userId = parsedUser.userId
+        const parsedUser = JSON.parse(storedUser)
+        // Kiểm tra nếu parsedUser là một mảng
+        const userData = Array.isArray(parsedUser) ? parsedUser[0] : parsedUser
+        const userId = userData.userid
 
         // Fetch user data from API
-        const response = await fetch(`http://localhost:5000/Users?userId=${userId}`)
+        const response = await fetch(`http://localhost:5001/Users?userid=${userId}`)
         if (!response.ok) {
           throw new Error('Không thể tải thông tin người dùng')
         }
@@ -86,22 +110,36 @@ const ProfilePage = () => {
       try {
         if (!userData) return
 
-        const [postsResponse, categoriesResponse] = await Promise.all([
-          fetch(`http://localhost:5000/BlogPost?userId=${userData.userId}`),
-          fetch('http://localhost:5000/categories')
-        ])
-
-        if (!postsResponse.ok || !categoriesResponse.ok) {
-          throw new Error('Failed to fetch data')
+        // Fetch all posts
+        const postsResponse = await fetch('http://localhost:5001/BlogPost')
+        if (!postsResponse.ok) {
+          throw new Error('Failed to fetch posts')
         }
+        const allPosts = await postsResponse.json()
+        
+        // Filter posts by userid
+        const userPosts = allPosts.filter((post: Post) => post.userid === userData.userid)
+        setPosts(userPosts)
 
-        const postsData = await postsResponse.json()
+        // Fetch categories
+        const categoriesResponse = await fetch('http://localhost:5001/categories')
+        if (!categoriesResponse.ok) {
+          throw new Error('Failed to fetch categories')
+        }
         const categoriesData = await categoriesResponse.json()
-
-        setPosts(postsData)
         setCategories(categoriesData)
+
+        // Fetch series
+        const seriesResponse = await fetch('http://localhost:5001/series')
+        if (!seriesResponse.ok) {
+          throw new Error('Failed to fetch series')
+        }
+        const seriesData = await seriesResponse.json()
+        const userSeries = seriesData.filter((series: Series) => series.userId === userData.userid)
+        setSeries(userSeries)
       } catch (err) {
         setError('Error loading data')
+        console.error('Error fetching data:', err)
       }
     }
 
@@ -131,6 +169,75 @@ const ProfilePage = () => {
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString()
+  }
+
+  const handleAddSeries = () => {
+    setShowAddSeriesModal(true)
+  }
+
+  const handleSeriesChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setNewSeries(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSeriesSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!userData) return
+
+    try {
+      setLoading(true)
+      setError('')
+
+      // Fetch the latest series to get the next id and seriesId
+      const response = await fetch('http://localhost:5001/series')
+      if (!response.ok) {
+        throw new Error('Failed to fetch series')
+      }
+      const existingSeries = await response.json()
+      const latestSeries = existingSeries[existingSeries.length - 1]
+      const nextId = latestSeries ? latestSeries.id + 1 : 1
+      const nextSeriesId = latestSeries ? latestSeries.seriesId + 1 : 1
+
+      const seriesData = {
+        id: nextId,
+        title: newSeries.title,
+        content: newSeries.content,
+        userId: userData.userid,
+        categoryId: parseInt(newSeries.categoryId.toString()),
+        seriesId: nextSeriesId
+      }
+
+      const addResponse = await fetch('http://localhost:5001/series', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(seriesData)
+      })
+
+      if (!addResponse.ok) {
+        const errorData = await addResponse.json()
+        throw new Error(errorData.message || 'Không thể thêm series')
+      }
+
+      const addedSeries = await addResponse.json()
+      setSeries(prev => [...prev, addedSeries])
+      setShowAddSeriesModal(false)
+      setNewSeries({
+        id: 0,
+        title: '',
+        content: '',
+        userId: 0,
+        categoryId: 0
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi thêm series')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (loading) {
@@ -272,8 +379,37 @@ const ProfilePage = () => {
               )}
 
               {activeTab === 'series' && (
-                <div className="no-content-message">
-                  Chưa có series nào
+                <div className="series-section">
+                  <div className="profile-header">
+                    <h2>My Series</h2>
+                    <button 
+                      className="add-series-btn"
+                      onClick={handleAddSeries}
+                    >
+                      Thêm series
+                    </button>
+                  </div>
+                  <div className="series-grid">
+                    {series.length > 0 ? (
+                      series.map(series => (
+                        <div key={series.id} className="series-card">
+                          <div className="series-content">
+                            <h3>{series.title}</h3>
+                            <p className="series-description">{series.content}</p>
+                            <div className="series-meta">
+                              <span className="series-category">
+                                {categories.find(cat => cat.id === series.categoryId)?.name || 'No category'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="no-content-message">
+                        Chưa có series nào
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -286,6 +422,66 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Series Modal */}
+      <Modal show={showAddSeriesModal} onHide={() => setShowAddSeriesModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Thêm Series</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={handleSeriesSubmit} className="series-form">
+            <div className="form-group">
+              <label htmlFor="title">Tiêu đề</label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={newSeries.title}
+                onChange={handleSeriesChange}
+                required
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="content">Nội dung</label>
+              <textarea
+                id="content"
+                name="content"
+                value={newSeries.content}
+                onChange={handleSeriesChange}
+                required
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="categoryId">Danh mục</label>
+              <select
+                id="categoryId"
+                name="categoryId"
+                value={newSeries.categoryId}
+                onChange={handleSeriesChange}
+                required
+                className="form-control"
+              >
+                <option value="">Chọn danh mục</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <Button variant="secondary" onClick={() => setShowAddSeriesModal(false)} className="btn-cancel">
+                Hủy
+              </Button>
+              <Button variant="primary" type="submit" disabled={loading} className="btn-submit">
+                {loading ? 'Đang thêm...' : 'Thêm'}
+              </Button>
+            </div>
+          </form>
+        </Modal.Body>
+      </Modal>
     </div>
   )
 }

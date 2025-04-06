@@ -4,10 +4,11 @@ import React, { useState, useRef } from 'react'
 import { Button, Image } from 'react-bootstrap'
 import { FaCamera } from 'react-icons/fa'
 import './ProfileImageUpload.css'
+import axios from 'axios'
 
 interface ProfileImageUploadProps {
   userId: number
-  currentAvatar?: string
+  currentAvatar?: string | null
   onUploadSuccess: (newAvatarUrl: string) => void
 }
 
@@ -43,25 +44,44 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
     try {
       setIsUploading(true)
       
-      const formData = new FormData()
-      formData.append('image', file)
-      formData.append('userId', userId.toString())
-
-      const response = await fetch('http://localhost:5000/upload-avatar', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (!response.ok) {
-        throw new Error('Upload failed')
+      // Chuyển đổi file thành base64
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      
+      reader.onload = async () => {
+        try {
+          const base64String = reader.result as string
+          
+          // Cập nhật avatar trực tiếp trong JSON server
+          const response = await axios.put(`http://localhost:5001/Users/${userId}`, {
+            avatar: base64String
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          if (response.status === 200) {
+            onUploadSuccess(base64String)
+          } else {
+            throw new Error('Không thể cập nhật avatar')
+          }
+        } catch (error) {
+          console.error('Error updating avatar:', error)
+          alert('Có lỗi xảy ra khi cập nhật ảnh đại diện: ' + (error instanceof Error ? error.message : 'Lỗi không xác định'))
+        } finally {
+          setIsUploading(false)
+        }
       }
-
-      const data = await response.json()
-      onUploadSuccess(data.avatarUrl)
+      
+      reader.onerror = () => {
+        console.error('Error reading file')
+        alert('Có lỗi xảy ra khi đọc file')
+        setIsUploading(false)
+      }
     } catch (error) {
       console.error('Error uploading avatar:', error)
-      alert('Có lỗi xảy ra khi tải lên ảnh đại diện')
-    } finally {
+      alert('Có lỗi xảy ra khi tải lên ảnh đại diện: ' + (error instanceof Error ? error.message : 'Lỗi không xác định'))
       setIsUploading(false)
     }
   }

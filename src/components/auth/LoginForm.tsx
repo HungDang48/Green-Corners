@@ -33,8 +33,8 @@ const LoginForm = () => {
     setLoading(true)
 
     try {
-      // Fetch users from JSON Server
-      const response = await fetch('http://localhost:5000/Users')
+      // Fetch users to check credentials
+      const response = await fetch('http://localhost:5001/Users')
       const users = await response.json()
       
       // Find user with matching email and password
@@ -43,8 +43,16 @@ const LoginForm = () => {
       )
 
       if (user) {
+        // Kiểm tra trạng thái isblock
+        if (user.isblock === true) {
+          setError('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ admin để được hỗ trợ.')
+          setLoading(false)
+          return
+        }
+        
         // Create user array with id, email, and avatar
         const userData = [{
+          userid: user.userid,
           id: user.id,
           email: user.email,
           avatar: user.avatar || null
